@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mentalgym — entrenamiento verbal</title>
+<meta name="description" content="Entrenamiento diario de agilidad verbal, velocidad de procesamiento y flexibilidad cognitiva. Sin audio, sin permisos y funciona sin conexión.">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="rail">
+    <button class="rail__exit" id="btn-exit" type="button" aria-label="Terminar la sesión" hidden>
+      <svg class="rail__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <span class="rail__label" id="rail-label">Mentalgym</span>
+    <span class="rail__value" id="rail-value"></span>
+  </header>
+
+  <main class="main">
+    <h1 class="visually-hidden">Mentalgym, entrenamiento verbal</h1>
+
+    <section class="view view--active" id="view-home">
+      <div class="view__body" tabindex="0">
+        <div class="home__head">
+          <p class="home__kicker">Racha</p>
+          <p class="home__streak"><span class="home__number" id="streak-days">0</span><span class="home__unit" id="streak-unit">días</span></p>
+          <p class="home__note" id="home-note"></p>
+        </div>
+
+        <div class="modes">
+          <button class="mode" type="button" data-start="fluency">
+            <span class="mode__name">Fluidez dual</span>
+            <span class="mode__rule">Una palabra que cumpla dos condiciones a la vez.</span>
+            <svg class="mode__chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <button class="mode" type="button" data-start="remote">
+            <span class="mode__name">Asociaciones remotas</span>
+            <span class="mode__rule">La palabra que conecta las tres que ves.</span>
+            <svg class="mode__chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <button class="mode" type="button" data-start="inhibit">
+            <span class="mode__name">Anti-cliché</span>
+            <span class="mode__rule">Asocia sin caer en lo automático.</span>
+            <svg class="mode__chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <button class="mode" type="button" data-start="switch">
+            <span class="mode__name">Alternancia</span>
+            <span class="mode__rule">La regla cambia en cada turno sin aviso.</span>
+            <svg class="mode__chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="deck">
+        <button class="btn btn--primary" type="button" data-start="mix">Empezar sesión mixta</button>
+      </div>
+    </section>
+
+    <section class="view view--play" id="view-play">
+      <div class="view__body view__body--play">
+        <div class="stage" id="stage" aria-live="off">
+          <p class="stage__mode" id="stage-mode" hidden></p>
+          <p class="stage__rule" id="stage-rule" hidden></p>
+          <div class="stage__content" id="stage-content"></div>
+          <div class="stage__chips" id="stage-chips" hidden></div>
+        </div>
+
+        <div class="pressure" id="pressure" aria-hidden="true">
+          <div class="pressure__track">
+            <div class="pressure__fill" id="pressure-fill"></div>
+          </div>
+        </div>
+
+        <div class="countdown" id="countdown" hidden>
+          <p class="countdown__rule" id="countdown-rule"></p>
+          <p class="countdown__number" id="countdown-number" aria-hidden="true"></p>
+        </div>
+      </div>
+
+      <div class="deck deck--play">
+        <button class="btn btn--action" id="btn-tap" type="button">Lo dije</button>
+        <p class="deck__note" id="deck-note" aria-live="off"></p>
+      </div>
+    </section>
+
+    <section class="view" id="view-summary">
+      <div class="view__body" tabindex="0"></div>
+      <div class="deck">
+        <button class="btn btn--primary" type="button" data-action="summary-home">Volver al inicio</button>
+      </div>
+    </section>
+
+    <section class="view" id="view-stats">
+      <div class="view__body" tabindex="0"></div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="view__body" tabindex="0">
+        <h2 class="section__title">Ajustes</h2>
+
+        <div class="panel">
+          <p class="panel__label">Nivel de dificultad</p>
+          <div class="segment" role="group" aria-label="Nivel de dificultad">
+            <button class="segment__btn" type="button" data-level="1" aria-pressed="false">Fácil</button>
+            <button class="segment__btn" type="button" data-level="2" aria-pressed="true">Normal</button>
+            <button class="segment__btn" type="button" data-level="3" aria-pressed="false">Difícil</button>
+          </div>
+          <p class="panel__hint">El nivel cambia la ventana de tiempo por estímulo.</p>
+        </div>
+
+        <div class="panel">
+          <label class="switch">
+            <span class="switch__text">Vibración al responder</span>
+            <input class="switch__input" id="opt-haptics" type="checkbox">
+            <span class="switch__track" aria-hidden="true"></span>
+          </label>
+
+          <label class="switch">
+            <span class="switch__text">Anunciar estímulo al lector de pantalla</span>
+            <input class="switch__input" id="opt-announce" type="checkbox">
+            <span class="switch__track" aria-hidden="true"></span>
+          </label>
+
+          <p class="panel__hint" data-capability></p>
+        </div>
+
+        <div class="panel">
+          <p class="panel__label">Datos</p>
+          <button class="row" type="button" data-action="export">
+            <span class="row__text">Descargar respaldo</span>
+            <span class="row__meta">JSON</span>
+          </button>
+          <button class="row" type="button" data-action="trigger-import">
+            <span class="row__text">Importar respaldo</span>
+            <span class="row__meta">Reemplaza</span>
+          </button>
+          <button class="row row--danger" type="button" data-action="reset">
+            <span class="row__text">Borrar progreso</span>
+            <span class="row__meta">Irreversible</span>
+          </button>
+          <input class="visually-hidden" id="file-import" type="file" accept="application/json" aria-label="Archivo de respaldo">
+        </div>
+
+        <div class="panel">
+          <p class="panel__label">Aplicación</p>
+          <button class="row" type="button" data-action="update">
+            <span class="row__text">Buscar actualización</span>
+            <span class="row__meta">Manual</span>
+          </button>
+        </div>
+
+        <p class="fineprint">Los datos viven solo en este dispositivo. Nada sale del teléfono.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="nav" aria-label="Navegación principal">
+    <button class="nav__btn nav__btn--active" type="button" data-view="home">
+      <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 13.5L12 4l8 9.5V20h-5v-4.5h-6V20H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      <span class="nav__text">Inicio</span>
+    </button>
+    <button class="nav__btn" type="button" data-view="stats">
+      <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M5 19V11M12 19V5M19 19v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span class="nav__text">Progreso</span>
+    </button>
+    <button class="nav__btn" type="button" data-view="settings">
+      <svg class="nav__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M5 8h9M18 8h1M5 16h3M12 16h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="16" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="10" cy="16" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </svg>
+      <span class="nav__text">Ajustes</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
