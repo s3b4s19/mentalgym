@@ -3,7 +3,7 @@
  * so the installed app never freezes on an old version.
  */
 
-const CACHE = 'mentalgym-v1';
+const CACHE = 'mentalgym-v2';
 
 const ASSETS = [
   './',

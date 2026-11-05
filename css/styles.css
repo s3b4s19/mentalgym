@@ -222,7 +222,7 @@ button {
 /* 6. Home --------------------------------------------------------- */
 
 .home__head {
-  padding-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
 }
 
 .home__kicker {
@@ -269,8 +269,8 @@ button {
   align-items: center;
   gap: 0.15rem 1rem;
   width: 100%;
-  min-height: 64px;
-  padding: 1rem 0;
+  min-height: 60px;
+  padding: 0.75rem 0;
   text-align: left;
   border-bottom: 1px solid var(--line);
 }
@@ -428,6 +428,9 @@ button {
   will-change: transform;
 }
 
+.pressure--pace-1200 { --pace: 1200ms; }
+.pressure--pace-1500 { --pace: 1500ms; }
+.pressure--pace-1800 { --pace: 1800ms; }
 .pressure--pace-2000 { --pace: 2000ms; }
 .pressure--pace-2500 { --pace: 2500ms; }
 .pressure--pace-3000 { --pace: 3000ms; }
@@ -1067,7 +1070,20 @@ button {
   }
 
   .home__head {
-    padding-bottom: 0.875rem;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .home__kicker {
+    display: block;
+    margin: 0;
+  }
+
+  .home__note {
+    display: none;
   }
 
   .home__number {
@@ -1078,16 +1094,17 @@ button {
     font-size: 1rem;
   }
 
-  .home__note {
-    font-size: 0.8125rem;
+  .view__body {
+    padding-top: 1rem;
   }
 
   .mode {
     min-height: 52px;
-    padding: 0.55rem 0;
+    padding: 0.45rem 0;
   }
 
   .mode__rule {
+    font-size: 0.75rem;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;

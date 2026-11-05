@@ -46,9 +46,24 @@ const MODES = {
     rule: 'La regla cambia en cada turno. Léela antes de responder.',
     paces: [3500, 2500, 2000],
   },
+  gonogo: {
+    key: 'gonogo',
+    name: 'Verificación',
+    rule: 'Toca solo cuando la palabra pertenezca a la categoría.',
+    paces: [1800, 1500, 1200],
+  },
+  nback: {
+    key: 'nback',
+    name: 'Memoria de trabajo',
+    rule: 'Toca cuando la palabra repita una de las anteriores.',
+    paces: [2000, 1800, 1500],
+  },
 };
 
-const MODE_KEYS = ['fluency', 'remote', 'inhibit', 'switch'];
+const MODE_KEYS = ['fluency', 'remote', 'inhibit', 'switch', 'gonogo', 'nback'];
+
+const BLOCK_SIZE = 7;
+const MIX_BLOCKS = 3;
 
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                       */
@@ -64,14 +79,6 @@ function el(tag, className, text) {
 }
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
-
-function shuffle(list) {
-  for (let i = list.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
-  }
-  return list;
-}
 
 function median(values) {
   if (!values.length) return 0;
@@ -111,7 +118,7 @@ function write(key, value) {
   }
 }
 
-const DEFAULT_SETTINGS = { level: 2, haptics: true, announce: false };
+const DEFAULT_SETTINGS = { level: 2, haptics: true, announce: false, lastTrained: {} };
 
 let settings = { ...DEFAULT_SETTINGS, ...read(K.settings, {}) };
 let sessions = read(K.sessions, []);
@@ -154,6 +161,7 @@ const S = {
   resolved: false,
   results: [],
   chain: { rule: null },
+  nbackSeq: [],
   used: new Set(),
   timer: 0,
   timeoutId: 0,
@@ -321,15 +329,87 @@ function buildSwitch(level) {
   });
 }
 
+/**
+ * Verification trial. `expect` is the ground truth: true means the word
+ * belongs to the category and the button should be pressed.
+ */
+function buildGoNoGo(level) {
+  const goRate = level === 1 ? 0.5 : level === 2 ? 0.65 : 0.8;
+  const expect = Math.random() < goRate;
+  const names = Object.keys(D.GONOGO);
+  const category = pick(names);
+
+  let word;
+  if (expect) {
+    word = pick(D.GONOGO[category]);
+  } else {
+    const others = names.filter((name) => name !== category);
+    word = pick(D.GONOGO[pick(others)]);
+  }
+
+  return baseItem('gonogo', level, {
+    main: word,
+    chips: [category],
+    rule: 'Toca si pertenece a la categoría',
+    meta: { expect, action: 'Pertenece' },
+  });
+}
+
+/**
+ * Working-memory trial. Level 1 is 1-back, levels 2 and 3 are 2-back with a
+ * tighter window. The sequence lives in the session state, so a block is
+ * always self-contained.
+ */
+function buildNBack(level) {
+  const steps = level === 1 ? 1 : 2;
+  const rate = level === 1 ? 0.4 : level === 2 ? 0.32 : 0.28;
+  const seq = S.nbackSeq;
+
+  let word;
+  let expect = false;
+
+  if (seq.length >= steps && Math.random() < rate) {
+    word = seq[seq.length - steps];
+    expect = true;
+  } else {
+    const blocked = seq.slice(-steps);
+    const pool = D.NBACK_WORDS.filter((entry) => !blocked.includes(entry));
+    word = pick(pool.length ? pool : D.NBACK_WORDS);
+  }
+
+  seq.push(word);
+
+  return baseItem('nback', level, {
+    main: word,
+    rule: steps === 1 ? 'Toca si repite la palabra anterior' : 'Toca si repite la de dos ítems atrás',
+    meta: { expect, action: 'Repite' },
+  });
+}
+
 function makeItem(ex, level) {
   if (ex === 'fluency') return buildFluency(level);
   if (ex === 'remote') return buildRemote(level);
   if (ex === 'inhibit') return buildInhibit(level);
+  if (ex === 'gonogo') return buildGoNoGo(level);
+  if (ex === 'nback') return buildNBack(level);
   return buildSwitch(level);
+}
+
+function chooseModes(count) {
+  const trained = settings.lastTrained || {};
+  const ranked = MODE_KEYS.map((key) => ({
+    key,
+    last: trained[key] || 0,
+    tie: Math.random(),
+  }));
+
+  ranked.sort((a, b) => a.last - b.last || a.tie - b.tie);
+  return ranked.slice(0, count).map((entry) => entry.key);
 }
 
 function buildSession(ex, level, size) {
   S.used = new Set();
+  S.nbackSeq = [];
   const items = [];
 
   if (ex !== 'mix') {
@@ -337,9 +417,9 @@ function buildSession(ex, level, size) {
     return items;
   }
 
-  const order = [];
-  while (order.length < size) order.push(...shuffle(MODE_KEYS.slice()));
-  for (let index = 0; index < size; index += 1) items.push(makeItem(order[index], level));
+  chooseModes(MIX_BLOCKS).forEach((key) => {
+    for (let index = 0; index < BLOCK_SIZE; index += 1) items.push(makeItem(key, level));
+  });
   return items;
 }
 
@@ -351,6 +431,13 @@ function itemLabel(item) {
   if (item.words) {
     const answer = item.answers.length ? ` → ${item.answers[0]}` : '';
     return `${item.words.join(', ')}${answer}`;
+  }
+  if (item.ex === 'gonogo') {
+    const category = item.chips.length ? item.chips[0] : '';
+    return `${item.main} (${category}) → ${item.meta.expect ? 'sí' : 'no'}`;
+  }
+  if (item.ex === 'nback') {
+    return `${item.main} → ${item.meta.expect ? 'repetía' : 'nueva'}`;
   }
   const base = item.main || '';
   if (item.banned.length) return `${base} (sin ${item.banned.join(', ')})`;
@@ -385,6 +472,8 @@ function paintItem(item) {
   }
   ui.stageChips.replaceChildren(...chips);
   ui.stageChips.hidden = chips.length === 0;
+
+  ui.tap.textContent = (item.meta && item.meta.action) || 'Lo dije';
 }
 
 function armPressure(pace) {
@@ -434,7 +523,7 @@ function runCountdown() {
   ui.countdown.hidden = false;
   ui.countdownRule.textContent =
     S.ex === 'mix'
-      ? 'Cuatro ejercicios alternados. La etiqueta sobre el estímulo te dice cuál toca.'
+      ? 'Tres bloques de siete. La etiqueta sobre el estímulo te dice cuál toca.'
       : MODES[S.ex].rule;
 
   let value = 3;
@@ -499,11 +588,15 @@ function settle(entry) {
   S.timeoutId = 0;
 
   const item = S.items[S.index];
+  const tapped = !entry.omission;
+  const expect = typeof item.meta.expect === 'boolean' ? item.meta.expect : null;
+  const ok = expect === null ? tapped : tapped === expect;
 
   S.record.items.push({
     rt: entry.rt,
     omission: entry.omission,
-    ok: !entry.omission,
+    ok,
+    expect,
     ex: item.ex,
     rule: item.meta.rule || null,
     switched: Boolean(item.meta.switched),
@@ -513,17 +606,17 @@ function settle(entry) {
 
   if (item.srId) markSeen(item.srId);
 
-  if (entry.omission) {
-    haptic.timeout(settings.haptics);
-    ui.stage.classList.add('stage--expired');
-    ui.deckNote.textContent = 'Tiempo agotado';
-    ui.pressure.classList.add('pressure--frozen');
-  } else {
+  if (ok) {
     haptic.confirm(settings.haptics);
     ui.stage.classList.add('stage--confirm');
-    ui.deckNote.textContent = `${entry.rt} ms`;
-    ui.pressure.classList.add('pressure--frozen');
+    ui.deckNote.textContent = tapped ? `${entry.rt} ms` : 'Correcto';
+  } else {
+    haptic.timeout(settings.haptics);
+    ui.stage.classList.add('stage--expired');
+    ui.deckNote.textContent = tapped ? 'Fallaste' : 'Sin respuesta';
   }
+
+  ui.pressure.classList.add('pressure--frozen');
 
   S.index += 1;
   const isLast = S.index >= S.items.length;
@@ -567,22 +660,29 @@ function finishSession() {
 
 function summarize(record) {
   const items = record.items;
-  const answered = items.filter((item) => !item.omission && typeof item.rt === 'number');
-  const rts = answered.map((item) => item.rt);
+  const tapped = items.filter((item) => !item.omission);
+  const correct = items.filter((item) => item.ok && typeof item.rt === 'number');
+  const rts = correct.map((item) => item.rt);
   const hits = items.filter((item) => item.ok).length;
+  const falseAlarms = items.filter((item) => !item.omission && !item.ok).length;
+  const misses = items.filter((item) => item.omission && !item.ok).length;
+  const hasExpect = items.some((item) => typeof item.expect === 'boolean');
 
-  const switched = answered.filter((item) => item.switched).map((item) => item.rt);
-  const repeated = answered.filter((item) => item.switched === false && item.rule).map((item) => item.rt);
+  const switched = correct.filter((item) => item.switched).map((item) => item.rt);
+  const repeated = correct.filter((item) => item.switched === false && item.rule).map((item) => item.rt);
 
   return {
     n: items.length,
-    answered: answered.length,
-    omissions: items.length - answered.length,
+    answered: tapped.length,
+    omissions: items.length - tapped.length,
     hits,
+    falseAlarms,
+    misses,
+    hasExpect,
     p50: median(rts),
     mean: rts.length ? Math.round(sum(rts) / rts.length) : 0,
     fast: rts.length ? Math.min(...rts) : 0,
-    switchCost: switched.length && repeated.length ? median(switched) - median(repeated) : null,
+    switchCost: switched.length >= 8 && repeated.length >= 8 ? median(switched) - median(repeated) : null,
   };
 }
 
@@ -603,6 +703,11 @@ function commitSession(record) {
 
   const cutoff = Date.now() - DETAIL_DAYS * DAY_MS;
   sessions = sessions.filter((entry) => entry.startedAt >= cutoff);
+
+  if (!settings.lastTrained) settings.lastTrained = {};
+  record.items.forEach((item) => {
+    if (item.ex) settings.lastTrained[item.ex] = Date.now();
+  });
 
   write(K.sessions, sessions);
   write(K.daily, daily);
@@ -643,9 +748,12 @@ function renderSummary(record) {
   body.append(head);
 
   const grid = el('div', 'stats');
-  grid.append(statBlock('Respondidos', `${summary.answered}/${summary.n}`));
-  grid.append(statBlock('Tiempo agotado', String(summary.omissions)));
   grid.append(statBlock('Aciertos', `${summary.hits}/${summary.n}`, null, 'hits'));
+  grid.append(statBlock('Tocaste', String(summary.answered)));
+  grid.append(statBlock('Sin respuesta', String(summary.omissions)));
+  if (summary.hasExpect) {
+    grid.append(statBlock('Falsos positivos', String(summary.falseAlarms), 'tocaste cuando no tocaba'));
+  }
   if (summary.switchCost !== null) {
     const sign = summary.switchCost > 0 ? '+' : '';
     grid.append(statBlock('Coste de cambio', `${sign}${summary.switchCost} ms`, 'alternar regla frente a repetirla'));
@@ -675,23 +783,26 @@ function renderSummary(record) {
 
 function levelHint(record) {
   const summary = record.summary;
-  const rate = summary.omissions / summary.n;
-  const pace = record.pace || 3000;
+  const total = summary.n || 1;
+  const accuracy = summary.hits / total;
+  const shaky = summary.misses / total > 0.4 || accuracy < 0.55;
 
-  if (rate > 0.4 && record.level > 1) {
+  if (record.level > 1 && shaky) {
     return {
-      text: `Se agotó el tiempo en ${summary.omissions} de ${summary.n}. Baja un nivel y consolida.`,
+      text: `Acertaste ${summary.hits} de ${summary.n}. Baja un nivel y consolida antes de forzar velocidad.`,
       label: 'Bajar de nivel',
       next: record.level - 1,
     };
   }
-  if (rate < 0.1 && summary.p50 > 0 && summary.p50 < pace * 0.55 && record.level < 3) {
+
+  if (record.level < 3 && accuracy >= 0.85 && summary.p50 > 0) {
     return {
-      text: `Mediana de ${summary.p50} ms con ventana de ${pace} ms. Puedes subir sin perder control.`,
+      text: `Acertaste ${summary.hits} de ${summary.n} con mediana de ${summary.p50} ms. Puedes subir de nivel.`,
       label: 'Subir de nivel',
       next: record.level + 1,
     };
   }
+
   return null;
 }
 
@@ -742,6 +853,14 @@ function persistEdits() {
 /* Stats view                                                          */
 /* ------------------------------------------------------------------ */
 
+function improvement(rts) {
+  if (rts.length < 40) return null;
+  const base = median(rts.slice(0, 20));
+  const current = median(rts.slice(-20));
+  if (!base) return null;
+  return Math.round(((current - base) / base) * 100);
+}
+
 function renderStats() {
   const view = $('#view-stats');
   const body = view.querySelector('.view__body');
@@ -760,7 +879,7 @@ function renderStats() {
 
   const buckets = {};
   MODE_KEYS.forEach((key) => {
-    buckets[key] = { rts: [], hits: 0, total: 0, omissions: 0 };
+    buckets[key] = { rts: [], hits: 0, total: 0, misses: 0 };
   });
 
   sessions.forEach((record) => {
@@ -771,8 +890,8 @@ function renderStats() {
 
       bucket.total += 1;
       if (item.ok) bucket.hits += 1;
-      if (item.omission) bucket.omissions += 1;
-      else if (typeof item.rt === 'number') bucket.rts.push(item.rt);
+      else if (item.omission) bucket.misses += 1;
+      if (item.ok && typeof item.rt === 'number') bucket.rts.push(item.rt);
     });
   });
 
@@ -783,12 +902,22 @@ function renderStats() {
     const card = el('article', 'card');
     card.append(el('h2', 'card__title', MODES[key].name));
 
+    const change = improvement(bucket.rts);
+    const recent = bucket.rts.slice(-20);
     const row = el('div', 'card__row');
-    row.append(statBlock('Mediana', `${median(bucket.rts) || 0} ms`));
+    row.append(statBlock('Mediana', recent.length ? `${median(recent)} ms` : '—'));
     row.append(statBlock('Acierto', `${Math.round((bucket.hits / bucket.total) * 100)}%`));
+    row.append(
+      statBlock(
+        'Vs inicio',
+        change === null ? '—' : `${change > 0 ? '+' : ''}${change}%`,
+        change === null ? 'aún sin referencia' : change < 0 ? 'más rápido' : change > 0 ? 'más lento' : 'igual'
+      )
+    );
+    row.append(statBlock('Fallos', String(bucket.misses)));
     card.append(row);
 
-    const meta = el('p', 'card__meta', `${bucket.total} estímulos, ${bucket.omissions} sin respuesta`);
+    const meta = el('p', 'card__meta', `${bucket.total} estímulos registrados`);
     card.append(meta);
     body.append(card);
   });
@@ -1003,19 +1132,23 @@ ui.pressureFill.addEventListener('animationend', (event) => {
 
 ui.exit.addEventListener('click', () => {
   if (!S.playing && !S.record) return;
+
+  const enough = S.record && S.record.items.length >= 5;
   S.playing = false;
-  if (S.record && S.record.items.length) {
+
+  if (enough) {
     S.record.endedAt = Date.now();
     finishSession();
-  } else {
-    S.committed = true;
-    ui.app.classList.remove('is-playing');
-    ui.exit.hidden = true;
-    ui.railLabel.textContent = 'Mentalgym';
-    ui.railValue.textContent = '';
-    screenLock.release();
-    showView('home');
+    return;
   }
+
+  S.committed = true;
+  ui.app.classList.remove('is-playing');
+  ui.exit.hidden = true;
+  ui.railLabel.textContent = 'Mentalgym';
+  ui.railValue.textContent = '';
+  screenLock.release();
+  showView('home');
 });
 
 document.addEventListener('click', (event) => {
@@ -1085,7 +1218,7 @@ document.querySelector('[data-action="trigger-import"]').addEventListener('click
 });
 
 window.addEventListener('pagehide', () => {
-  if (S.playing && S.record && S.record.items.length && !S.committed) {
+  if (S.playing && S.record && S.record.items.length >= 5 && !S.committed) {
     S.record.endedAt = Date.now();
     commitSession(S.record);
   }

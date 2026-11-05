@@ -33,6 +33,19 @@ Y abre `http://localhost:4180/`.
 Para probar en una subcarpeta, sirve el directorio bajo `/mentalgym/`. El
 Service Worker solo se registra en contextos seguros: `https` o `localhost`.
 
+## Ejercicios
+
+Seis modos, agrupados por el tipo de demanda:
+
+- **Fluidez dual.** Una palabra que empiece por una letra y cumpla una segunda condición.
+- **Asociaciones remotas.** La palabra que conecta tres estímulos.
+- **Anti-cliché.** Asociar evitando las respuestas automáticas marcadas.
+- **Alternancia.** La regla cambia entre fonética, antónimo y uso del objeto.
+- **Verificación.** Tocar solo cuando la palabra pertenece a la categoría. Primer modo con acierto verificable.
+- **Memoria de trabajo.** Tocar cuando la palabra repite una anterior: 1-back en fácil, 2-back en normal y difícil.
+
+La sesión mixta arma tres bloques de siete ítems eligiendo los modos menos entrenados, de forma que los seis se cubren de forma rotativa. Cada sesión de un solo modo es de veinte ítems.
+
 ## Estructura
 
 ```
@@ -50,10 +63,18 @@ icons/          Iconos 192, 512 y maskable
 
 Todo se guarda en `localStorage` del dispositivo. Detalle de los últimos 90
 días, agregados diarios permanentes y repetición espaciada a 7, 30, 90 y 180
-días. La exportación en JSON desde Ajustes es el respaldo: cúbrelo antes de
-cambiar de teléfono.
+días para los bancos curados. El progreso compara cada modo contra sí mismo,
+nunca contra otro ejercicio, porque el tiempo de un modo no es comparable con
+el de otro. La exportación en JSON desde Ajustes es el respaldo: cúbrelo antes
+de cambiar de teléfono.
 
 ## Actualizaciones
 
-El Service Worker no toma el control de una versión nueva a mitad de sesión.
-Cuando publiques cambios, abre Ajustes y usa Buscar actualización.
+El Service Worker sirve los archivos desde caché y no los revalida en cada
+carga, así que cada despliegue con archivos nuevos exige **subir el número de
+`CACHE` en `sw.js`** (`mentalgym-v2`, `mentalgym-v3`...). Sin ese cambio el
+navegador no detecta un Service Worker nuevo y los usuarios instalados siguen
+viendo la versión anterior.
+
+Con el número subido, el Service Worker no toma el control a mitad de sesión:
+abre Ajustes y usa Buscar actualización para aplicarlo.

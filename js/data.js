@@ -99,6 +99,30 @@ export const INHIBIT = [
   { level: 3, word: 'trabajo', banned: ['dinero', 'jefe', 'oficina'] },
 ];
 
+/**
+ * Membership pools for the verification exercise.
+ * A No-Go trial always draws its word from a different category, so every
+ * trial has one unambiguous correct answer.
+ */
+export const GONOGO = {
+  animales: ['perro', 'gato', 'caballo', 'tigre', 'ballena', 'águila', 'ratón', 'serpiente', 'vaca', 'delfín'],
+  frutas: ['manzana', 'pera', 'plátano', 'naranja', 'uva', 'sandía', 'melón', 'cereza', 'piña', 'mango'],
+  muebles: ['silla', 'mesa', 'cama', 'sofá', 'armario', 'estantería', 'cómoda', 'escritorio', 'taburete', 'butaca'],
+  instrumentos: ['guitarra', 'piano', 'violín', 'tambor', 'flauta', 'trompeta', 'arpa', 'saxofón', 'chelo', 'clarinete'],
+  herramientas: ['martillo', 'destornillador', 'sierra', 'taladro', 'alicate', 'cincel', 'nivel', 'lijadora', 'formón', 'mazo'],
+  deportes: ['fútbol', 'tenis', 'natación', 'baloncesto', 'ciclismo', 'boxeo', 'atletismo', 'golf', 'voleibol', 'esquí'],
+  colores: ['rojo', 'azul', 'verde', 'amarillo', 'negro', 'blanco', 'violeta', 'naranja', 'gris', 'marrón'],
+  vehículos: ['coche', 'bicicleta', 'moto', 'tren', 'avión', 'barco', 'autobús', 'camión', 'helicóptero', 'tranvía'],
+  oficios: ['médico', 'profesor', 'carpintero', 'abogado', 'bombero', 'panadero', 'fontanero', 'periodista', 'arquitecto', 'enfermero'],
+};
+
+/** Neutral single words for the working-memory sequence. */
+export const NBACK_WORDS = [
+  'perro', 'mesa', 'río', 'luna', 'tren', 'pan', 'luz', 'mar', 'sol', 'casa',
+  'mano', 'flor', 'puerta', 'silla', 'vino', 'cielo', 'piedra', 'libro', 'agua',
+  'fuego', 'nube', 'tierra', 'voz', 'reloj',
+];
+
 /** Antonym pairs used by the alternating-rules exercise. */
 export const ANTONYMS = [
   { word: 'frío', answers: ['caliente', 'calor'] },
