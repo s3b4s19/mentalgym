@@ -4,6 +4,8 @@ Entrenador de agilidad verbal, velocidad de procesamiento y flexibilidad
 cognitiva. PWA sin dependencias, sin audio y sin permisos: funciona offline
 desde el primer arranque.
 
+Qué viene después: [ROADMAP.md](ROADMAP.md).
+
 ## Despliegue en GitHub Pages
 
 La app debe publicarse en un repositorio llamado `mentalgym` para que la URL
